@@ -1,0 +1,222 @@
+#-----------------------------#
+# Loading missing package FUN #
+#-----------------------------#
+
+using <- function(...) { ## Retreived from https://stackoverflow.com/users/4125693/matthew
+  libs <- unlist(list(...))
+  req <- unlist(lapply(libs, require, character.only = TRUE))
+  need <- libs[req == FALSE]
+  n <- length(need)
+  if (n > 0) {
+    libsmsg <- if (n > 2) paste(paste(need[1:(n - 1)], collapse = ", "), ",", sep = "") else need[1]
+    print(libsmsg)
+    if (n > 1) {
+      libsmsg <- paste(libsmsg, " and ", need[n], sep = "")
+    }
+    libsmsg <- paste("The following packages could not be found: ", libsmsg, "\n\r\n\rInstall missing packages?", collapse = "")
+    if (winDialog(type = c("yesno"), libsmsg) == "YES") {
+      install.packages(need)
+      lapply(need, require, character.only = TRUE)
+    }
+  }
+}
+
+#-------------------#
+# Reformatting data #
+#-------------------#
+
+using("dplyr", "ggplot2", "ggstatsplot", "hrbrthemes", "ggpubr", "ggdendro","gridExtra")
+
+balance_df <- read.csv("balance_study.csv", sep = ",", header = TRUE)
+balance_df <- balance_df[-c(67:104), ]
+names(balance_df)[names(balance_df) == "After_Prorio"] <- "After_Proprio"
+
+str(balance_df) # Checking data frame structure
+
+cols <- c(5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17) # Converting from char to numeric
+for (i in cols) {
+  balance_df[, i] <- round(as.numeric(gsub("%", "", balance_df[, i])), 0)
+}
+balance_df$Gender <- as.factor(balance_df$Gender)
+balance_df$Glasses_FVE <- as.factor(balance_df$Glasses_FVE)
+
+print(table(balance_df$Gender)) # 2x more females than males w/ mTBI
+print(table(balance_df$Glasses_FVE))
+
+str(balance_df) # Checking data frame structure after reformatting
+
+#------------------------------------------#
+# Normality tests (visual and mathematical)#
+#------------------------------------------#
+
+# Created function to calculate skewness of vars in df
+skewness <- function(x, na.rm = FALSE) {
+  if (is.data.frame(x) || is.matrix(x)) {
+    if (na.rm) {
+      x <- apply(x, 2, function(column) column[!is.na(column)])
+    }
+    skew <- apply(x, 2, function(column) {
+      n <- length(column)
+      skewness <- (sum((column - mean(column))^3) / (n * sd(column)^3))
+      return(skewness)
+    })
+  } else {
+    if (na.rm) {
+      x <- x[!is.na(x)]
+    }
+    n <- length(x)
+    skew <- (sum((x - mean(x))^3) / (n * sd(x)^3))
+  }
+  return(skew)
+}
+
+# Created function to calculate kurtosis of vars in df.
+kurtosis <- function(x, na.rm = FALSE) {
+  if (is.data.frame(x) || is.matrix(x)) {
+    if (na.rm) {
+      x <- apply(x, 2, function(column) column[!is.na(column)])
+    }
+    kurt <- apply(x, 2, function(column) {
+      n <- length(column)
+      kurtosis <- (sum((column - mean(column))^4) / (n * sd(column)^4)) - 3
+      return(kurtosis)
+    })
+  } else {
+    if (na.rm) {
+      x <- x[!is.na(x)]
+    }
+    n <- length(x)
+    kurt <- (sum((x - mean(x))^4) / (n * sd(x)^4)) - 3
+  }
+  return(kurt)
+}
+
+# Creating summary df of vars mean, skew, and kurtosis.
+var_stats <- t(data.frame(lapply(balance_df[, -(1:2)], function(x) {
+  mean_val <- mean(x, na.rm = TRUE) # Calculate mean
+  skew_val <- skewness(x, na.rm = TRUE) # Calculate skewness 
+  kurt_val <- kurtosis(x, na.rm = TRUE) # Calculate kurtosis
+  return(round(c(Mean = mean_val, Skewness = skew_val, Kurtosis = kurt_val), 2))
+})))
+
+# Evaluating disrance between data points and vars (Mahalanobis distance & 1-cor)
+
+balance_center <- colMeans(balance_df[, 3:9]) # Calculating center for each var.
+balance_cov <- cov(balance_df[, 3:9]) # Calculating cov. for each var
+distance <- mahalanobis(balance_df[, 3:9], balance_center, balance_cov)
+cutoff <- qchisq(p = .90, df = ncol(balance_df[, 3:9])) # Calculating cutoff point (p = .90, df = 7)
+probable_outlier <- balance_df[, 3:9][distance > cutoff, ] # Returning data points > cutoff value
+probable_outlier_with_mean <- as.data.frame(rbind(probable_outlier, var_stats[1:7, 1]))
+rownames(outlier_with_mean)[nrow(outlier_with_mean)] <- "Mean" # Adding mean to each column of prob. outliers
+print(outlier_with_mean) # 12% of sample probable outlier
+
+cor_dist <- round(as.dist((1 - cor(balance_df[, 3:9] / 2))) * 1000) # Using correlation between vars as distance. 
+                                                                    # As correlation gets stronger, distance between vars gets closer
+hc <- hclust(cor_dist, "complete") # Representing distance as hierarchical cluster
+hc_plot <- ggdendrogram(hc, rotate = FALSE, size = 2)
+print(hc_plot)
+
+# Created function to convert percentile scores to z-scores for density plots
+standardize <- function(x, ..., na.rm = FALSE) {
+  if (is.data.frame(x) || is.matrix(x)) {
+    if (na.rm) {
+      x <- apply(x, 2, function(column) column[!is.na(column)])
+    }
+    z_score <- apply(x, 2, function(column) {
+      avg <- mean(column)
+      stdev <- sd(column)
+      z_score <- (column - avg) / stdev
+      return(z_score)
+    })
+    return(z_score)
+  } else {
+    if (na.rm) {
+      x <- x[!is.na(x)]
+    }
+    avg <- mean(x)
+    stdev <- sd(x)
+    z_score <- (x - mean(x)) / sd(x)
+    return(z_score)
+  }
+}
+
+gender_plot <- ggplot(balance_df, aes(Gender, fill = Gender)) +
+  geom_bar(width = .4) +
+  scale_fill_hue(c = 40) +
+  facet_grid(vars(Glasses_FVE)) +
+  theme_light() +
+  ggtitle("Barplot showing number of patients (by gender) wearing glasses at start of FVE") +
+  theme(plot.title = element_text(family = "", face = "italic", color = "black", size = 12))
+print(gender_plot)
+
+# Standardizing Proprioception variable prior to plotting density
+balance_df$zPre_Proprio <- standardize(balance_df$Pre_Proprio)
+balance_df$zAfter_Proprio <- standardize(balance_df$After_Proprio)
+
+# Plotting standardized pre/after proprioception measurements.
+proprio_density <- ggplot(balance_df, aes(zPre_Proprio)) +
+  geom_density(aes(zPre_Proprio, y = after_stat(density)), fill = "#69b3a2") +
+  geom_label(aes(3.5, .25, label = "Pre_Proprio"), color = "#69b3a2") +
+  geom_density(aes(zAfter_Proprio, y = -after_stat(density)), fill = "#404080") +
+  geom_label(aes(3.5, -.25, label = "After_Proprio"), color = "#404080") +
+  theme_ipsum() +
+  xlab("Proprioception measurement before and after FVE") +
+  theme_light() +
+  ggtitle("Density plot comparing Proprioception measurements before and after FVE") +
+  theme(plot.title = element_text(family = "", face = "italic", color = "black", size = 12))
+print(proprio_density)
+
+# Created function to display Q-Q plots for numeric variables in df.
+QQ_plots <- function(data, cols, show_labels = TRUE) { # labeling y-axis to identify vars
+  qq_plots <- list()
+  for (col in cols) { # cols is a vector containing the desired columns
+    plot <- ggqqplot(data[[col]]) # requires ggpubr, gridExtra and ggplot2
+    col_name <- colnames(data)[col]
+    if (show_labels) {
+      plot <- plot + labs(y = col)
+    }
+    qq_plots[[col]] <- plot
+  }
+  qq_panel <- do.call(grid.arrange, qq_plots)
+  return(qq_panel)
+}
+
+# Created function to display histograms for numeric vars in df. 
+
+histograms <- function(data, cols) {
+  hist_plots <- list()
+  for (col in cols) {
+    plot <- ggplot(data, aes(x = .data[[col]])) +
+      geom_histogram(binwidth = 2.5, fill = "#69b3a2", color = "#404080") +
+      labs(x = col, y = "Frequency") + 
+      theme_minimal()
+    
+    hist_plots[[col]] <- plot
+  }
+  hist_panel <- do.call(grid.arrange, hist_plots)
+  return(hist_panel)
+}
+
+
+
+# Example usage: Create histograms for columns 3 to 13
+cols_to_plot <- 3:13
+histogram_panel <- histograms(balance_df, cols_to_plot)
+
+# Print the histogram panel
+print(histogram_panel)
+
+
+corr_matrix <- ggcorrmat(balance_df,
+  method = "pearson", # Correlation matrix
+  label = TRUE, # assuming normality
+  cor.vars = c(
+    "Age", "months_mTBI", "Pre_Proprio",
+    "Pre_Visual", "Pre_Vest", "Pre_Cumul",
+    "weeks_glasses", "After_Proprio",
+    "After_Visual", "After_Vest", "After_Cumul"
+  ),
+  title = "Correlation matrix",
+  size = 2
+)
+print(corr_matrix)

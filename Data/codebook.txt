@@ -1,11 +1,14 @@
 Statistical analysis of data related to the impact of glasses prescription changes on measures of balance. A spreadsheet is provided (66 patients - 34 who had never worn glasses, 32 who started the process wearing their old prescription glasses) with the following data:
 
 https://okanaganvisiontherapy.ca/faq/
+
+Gender: male/female
 Age
+Glasses_FVE:  patient wore classes at time of Functional Visual Evaluation (Y/N)
 Months since concussion
-Pre-measures of proprioception (percentile)
-Pre-measures of visual (percentile)
-Pre-measures of vestibular (percentile)
+Pre-measures of proprioception (percentile) - kinesthesia (awareness of limb movements) and joint position sense
+Pre-measures of visual (percentile) - allows us to sense the environment and move through space
+Pre-measures of vestibular (percentile) - senses motion,equilibrium and spatial awareness.
 Number of weeks with glasses
 Post-measures of proprioception (percentile)
 Post-measures of visual (percentile)

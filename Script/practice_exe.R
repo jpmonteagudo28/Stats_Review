@@ -226,3 +226,43 @@ y_val <- abs(dnorm(x_val,avg, sdY)*diff(Y[1:2])*100)
 hist(Y,col = "palegreen3", breaks =seq(min(Y), max(Y), length.out = 25),xlab = "Average winnings per bet", ylab = "Frequency",
      main = "Average winnings/bet after betting 1000 on green")
 lines(x_val,y_val, col = "royalblue3",lwd = 2)
+
+#------------------------------------------------#
+# Interest rates  (CH14.12)                      #
+#------------------------------------------------#
+
+p <- .03
+foreclosure_loss <- -200000
+n <- 10000
+
+S <- sample(c(0,1),n,prob = c(1-p,p), replace = T)
+sum(S*foreclosure_loss)
+# [1] -55800000
+
+#MC sim
+losses <- replicate(10000,{
+  S <- sample(c(0,1),n,prob = c(1-p,p), replace = T)
+  sum(S*foreclosure_loss)
+})
+
+losses <- data.frame(losses=losses/10^6)
+ggplot(losses, aes(x = losses))+ geom_histogram()
+
+exp_val <- n*(p*foreclosure_loss + (1-p)*0)
+# [1] -6e+07
+std_error <- sqrt(n)*abs(foreclosure_loss)*sqrt(p*(1-p));std_error
+# [1] 3411744
+
+# Each loan is $180,000. How much to charge in interest to break even?
+xtra_amt <- -foreclosure_loss*p/(1-p) # $6185.57
+interest <- (xtra_amt/180000)*100 # 3.44%
+
+# How much to charge in interest to minimize losses? P(s < 0) = .05
+z <- qnorm(.05)
+nw_xtra_amt <- -foreclosure_loss*((n*p)-z*sqrt(n*p*(1-p)))/(n*(1-p) + z*sqrt(n*p*(1*p)))
+# [1] $6767.548
+nw_interest <- (nw_xtra_amt/180000)*100
+# 3.76
+
+# If the bank wants to minimize the probability of losing money, setting a lower risk limit
+# may not cause interest rates to increase. 
