@@ -2,7 +2,7 @@
 # Loading missing package FUN #
 #-----------------------------#
 
-using <- function(...) { ## Retreived from https://stackoverflow.com/users/4125693/matthew
+using <- function(...) { ## Retrieved from https://stackoverflow.com/users/4125693/matthew
   libs <- unlist(list(...))
   req <- unlist(lapply(libs, require, character.only = TRUE))
   need <- libs[req == FALSE]
@@ -98,9 +98,9 @@ var_stats <- t(data.frame(lapply(balance_df[, -(1:2)], function(x) {
   kurt_val <- kurtosis(x, na.rm = TRUE) # Calculate kurtosis
   return(round(c(Mean = mean_val, Skewness = skew_val, Kurtosis = kurt_val), 2))
 })))
+print(var_stats)
 
-# Evaluating disrance between data points and vars (Mahalanobis distance & 1-cor)
-
+# Evaluating distance between data points and vars (Mahalanobis distance & 1-cor)
 balance_center <- colMeans(balance_df[, 3:9]) # Calculating center for each var.
 balance_cov <- cov(balance_df[, 3:9]) # Calculating cov. for each var
 distance <- mahalanobis(balance_df[, 3:9], balance_center, balance_cov)
@@ -181,6 +181,9 @@ QQ_plots <- function(data, cols, show_labels = TRUE) { # labeling y-axis to iden
   return(qq_panel)
 }
 
+cols <- colnames(balance_df[,3:13])
+print(QQ_plots(balance_df,cols))
+
 # Created function to display histograms for numeric vars in df. 
 
 histograms <- function(data, cols) {
@@ -196,16 +199,10 @@ histograms <- function(data, cols) {
   hist_panel <- do.call(grid.arrange, hist_plots)
   return(hist_panel)
 }
+cols <- colnames(balance_df[,3:13])
+print(histograms(balance_df,cols))
 
-
-
-# Example usage: Create histograms for columns 3 to 13
-cols_to_plot <- 3:13
-histogram_panel <- histograms(balance_df, cols_to_plot)
-
-# Print the histogram panel
-print(histogram_panel)
-
+# Created correlation matrix to assess independence.
 
 corr_matrix <- ggcorrmat(balance_df,
   method = "pearson", # Correlation matrix
@@ -220,3 +217,25 @@ corr_matrix <- ggcorrmat(balance_df,
   size = 2
 )
 print(corr_matrix)
+
+my_cols <- c("#00AFBB", "#E7B800")
+panel.cor <- function(x, y){
+  usr <- par("usr"); on.exit(par(usr))
+  par(usr = c(0, 1, 0, 1))
+  r <- round(cor(x, y), digits=2)
+  txt <- paste0("R = ", r)
+  cex.cor <- 0.8/strwidth(txt)
+  text(0.5, 0.5, txt, cex = cex.cor * r)
+}
+# Customize upper panel
+upper.panel<-function(x, y){
+  points(x,y, pch = 19, col = my_cols[balance_df$Glasses_FVE], cex = 1.5)
+}
+
+pairs(balance_df[,3:8],
+      upper.panel = upper.panel,
+      lower.panel = panel.cor)
+
+pairs(balance_df[,c(3,4,10,11,12,13)],
+      upper.panel = upper.panel,
+      lower.panel = panel.cor)
