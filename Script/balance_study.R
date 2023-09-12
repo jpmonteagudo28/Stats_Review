@@ -25,7 +25,9 @@ using <- function(...) { ## Retrieved from https://stackoverflow.com/users/41256
 # Reformatting data #
 #-------------------#
 
-using("dplyr", "ggplot2", "ggstatsplot", "hrbrthemes", "ggpubr", "ggdendro","gridExtra")
+using("dplyr", "ggplot2", "ggstatsplot", "hrbrthemes", "ggpubr", "ggdendro","gridExtra","car")
+
+setwd("C:/Users/jpmonteagudo/Desktop/R/Review/Data")
 
 balance_df <- read.csv("balance_study.csv", sep = ",", header = TRUE)
 balance_df <- balance_df[-c(67:104), ]
@@ -46,7 +48,7 @@ print(table(balance_df$Glasses_FVE))
 str(balance_df) # Checking data frame structure after reformatting
 
 #------------------------------------------#
-# Normality tests (visual and mathematical)#
+# Normality tests (visual)                  #
 #------------------------------------------#
 
 # Created function to calculate skewness of vars in df
@@ -106,7 +108,7 @@ balance_cov <- cov(balance_df[, 3:9]) # Calculating cov. for each var
 distance <- mahalanobis(balance_df[, 3:9], balance_center, balance_cov)
 cutoff <- qchisq(p = .90, df = ncol(balance_df[, 3:9])) # Calculating cutoff point (p = .90, df = 7)
 probable_outlier <- balance_df[, 3:9][distance > cutoff, ] # Returning data points > cutoff value
-probable_outlier_with_mean <- as.data.frame(rbind(probable_outlier, var_stats[1:7, 1]))
+outlier_with_mean <- as.data.frame(rbind(probable_outlier, var_stats[1:7, 1]))
 rownames(outlier_with_mean)[nrow(outlier_with_mean)] <- "Mean" # Adding mean to each column of prob. outliers
 print(outlier_with_mean) # 12% of sample probable outlier
 
@@ -216,8 +218,9 @@ corr_matrix <- ggcorrmat(balance_df,
   title = "Correlation matrix",
   size = 2
 )
-print(corr_matrix)
+print(corr_matrix) 
 
+# Scatterplot matrix
 my_cols <- c("#00AFBB", "#E7B800")
 panel.cor <- function(x, y){
   usr <- par("usr"); on.exit(par(usr))
@@ -239,3 +242,27 @@ pairs(balance_df[,3:8],
 pairs(balance_df[,c(3,4,10,11,12,13)],
       upper.panel = upper.panel,
       lower.panel = panel.cor)
+
+#-------------------------------#
+#Normality test (mathematical)  #
+#-------------------------------#
+
+normality_shapiro_test <- data.frame(t(sapply(balance_df[,3:13], shapiro.test)))
+non_normal <- normality_shapiro_test[normality_shapiro_test$p.value <= .05,]; print(non_normal) # Non-normal data
+homogeneity_test<- t(sapply(balance_df[,3:13], function(x) leveneTest(x~Glasses_FVE,balance_df))) # Equal variances assumed
+
+
+# Visualizing difference in visual measurements in each group
+boxplots <- function(data, cols) {
+  boxplot_plots <- list()
+  for (col in cols) {
+    plot <- ggplot(data, aes(x = Glasses_FVE, y = .data[[col]])) +
+      geom_boxplot(fill = "steelblue", color = "black") +
+      labs(x = "Wearing glasses at start of FVE", y = col) +
+      theme_minimal()
+    
+    boxplot_plots[[col]] <- plot
+  }
+  boxplot_panel <- do.call(grid.arrange, boxplot_plots)
+  return(boxplot_panel)
+}
