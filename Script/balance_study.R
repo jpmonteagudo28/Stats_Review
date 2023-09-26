@@ -25,7 +25,11 @@ using <- function(...) { ## Retrieved from https://stackoverflow.com/users/41256
 # Reformatting data #
 #-------------------#
 
-using("dplyr", "ggplot2", "ggstatsplot", "hrbrthemes", "ggpubr", "ggdendro","gridExtra","car")
+using("dplyr", "ggplot2", 
+      "ggstatsplot", "hrbrthemes",
+      "ggpubr", "ggdendro",
+      "gridExtra","car",
+      "quantreg","emmeans")
 
 setwd("C:/Users/jpmonteagudo/Desktop/R/Review/Data")
 
@@ -40,7 +44,7 @@ for (i in cols) {
   balance_df[, i] <- round(as.numeric(gsub("%", "", balance_df[, i])), 0)
 }
 balance_df$Gender <- as.factor(balance_df$Gender)
-balance_df$Glasses_FVE <- as.factor(balance_df$Glasses_FVE)
+balance_df$Glasses_FVE <- c(0,1) # 0 = No, 1 = Yes
 
 print(table(balance_df$Gender)) # 2x more females than males w/ mTBI
 print(table(balance_df$Glasses_FVE))
@@ -48,7 +52,7 @@ print(table(balance_df$Glasses_FVE))
 str(balance_df) # Checking data frame structure after reformatting
 
 #------------------------------------------#
-# Normality tests (visual)                  #
+# Normality tests (graphical)              #
 #------------------------------------------#
 
 # Created function to calculate skewness of vars in df
@@ -111,6 +115,7 @@ probable_outlier <- balance_df[, 3:9][distance > cutoff, ] # Returning data poin
 outlier_with_mean <- as.data.frame(rbind(probable_outlier, var_stats[1:7, 1]))
 rownames(outlier_with_mean)[nrow(outlier_with_mean)] <- "Mean" # Adding mean to each column of prob. outliers
 print(outlier_with_mean) # 12% of sample probable outlier
+                        # id 24 0 scores on pre-treatment measures
 
 cor_dist <- round(as.dist((1 - cor(balance_df[, 3:9] / 2))) * 1000) # Using correlation between vars as distance. 
                                                                     # As correlation gets stronger, distance between vars gets closer
@@ -151,22 +156,23 @@ gender_plot <- ggplot(balance_df, aes(Gender, fill = Gender)) +
   theme(plot.title = element_text(family = "", face = "italic", color = "black", size = 12))
 print(gender_plot)
 
-# Standardizing Proprioception variable prior to plotting density
-balance_df$zPre_Proprio <- standardize(balance_df$Pre_Proprio)
-balance_df$zAfter_Proprio <- standardize(balance_df$After_Proprio)
+# Standardizing Cumulative results variable prior to plotting density
+balance_df$zPre_Cumul <- standardize(balance_df$Pre_Cumul)
+balance_df$zAfter_Cumul <- standardize(balance_df$After_Cumul)
+balance_df$zChange_Cumul <- standardize(balance_df$Change_Cumul)
 
 # Plotting standardized pre/after proprioception measurements.
-proprio_density <- ggplot(balance_df, aes(zPre_Proprio)) +
-  geom_density(aes(zPre_Proprio, y = after_stat(density)), fill = "#69b3a2") +
-  geom_label(aes(3.5, .25, label = "Pre_Proprio"), color = "#69b3a2") +
-  geom_density(aes(zAfter_Proprio, y = -after_stat(density)), fill = "#404080") +
-  geom_label(aes(3.5, -.25, label = "After_Proprio"), color = "#404080") +
+cumul_density <- ggplot(balance_df, aes(zPre_Cumul)) +
+  geom_density(aes(zPre_Cumul, y = after_stat(density)), fill = "#69b3a2") +
+  geom_label(aes(3.5, .25, label = "Pre_Cumul"), color = "#69b3a2") +
+  geom_density(aes(zAfter_Cumul, y = -after_stat(density)), fill = "#404080") +
+  geom_label(aes(3.5, -.25, label = "After_Cumul"), color = "#404080") +
   theme_ipsum() +
-  xlab("Proprioception measurement before and after FVE") +
+  xlab("Cumulative measurement before and after FVE") +
   theme_light() +
-  ggtitle("Density plot comparing Proprioception measurements before and after FVE") +
+  ggtitle("Density plot comparing Cumulative measurements before and after FVE") +
   theme(plot.title = element_text(family = "", face = "italic", color = "black", size = 12))
-print(proprio_density)
+print(cumul_density)
 
 # Created function to display Q-Q plots for numeric variables in df.
 QQ_plots <- function(data, cols, show_labels = TRUE) { # labeling y-axis to identify vars
@@ -187,7 +193,6 @@ cols <- colnames(balance_df[,3:13])
 print(QQ_plots(balance_df,cols))
 
 # Created function to display histograms for numeric vars in df. 
-
 histograms <- function(data, cols) {
   hist_plots <- list()
   for (col in cols) {
@@ -205,9 +210,8 @@ cols <- colnames(balance_df[,3:13])
 print(histograms(balance_df,cols))
 
 # Created correlation matrix to assess independence.
-
 corr_matrix <- ggcorrmat(balance_df,
-  method = "pearson", # Correlation matrix
+  method = "kendall", # Correlation matrix
   label = TRUE, # assuming normality
   cor.vars = c(
     "Age", "months_mTBI", "Pre_Proprio",
@@ -225,7 +229,7 @@ my_cols <- c("#00AFBB", "#E7B800")
 panel.cor <- function(x, y){
   usr <- par("usr"); on.exit(par(usr))
   par(usr = c(0, 1, 0, 1))
-  r <- round(cor(x, y), digits=2)
+  r <- round(cor(x, y,method = "kendall"), digits=2)
   txt <- paste0("R = ", r)
   cex.cor <- 0.8/strwidth(txt)
   text(0.5, 0.5, txt, cex = cex.cor * r)
@@ -239,17 +243,17 @@ pairs(balance_df[,3:8],
       upper.panel = upper.panel,
       lower.panel = panel.cor)
 
-pairs(balance_df[,c(3,4,10,11,12,13)],
+pairs(balance_df[,c(3,4,10,11,12,13,17)],
       upper.panel = upper.panel,
       lower.panel = panel.cor)
 
 #-------------------------------#
-#Normality test (mathematical)  #
+# Normality test (numerical)    #
 #-------------------------------#
 
-normality_shapiro_test <- data.frame(t(sapply(balance_df[,3:13], shapiro.test)))
+normality_shapiro_test <- data.frame(t(sapply(balance_df[,c(3:13,17)], shapiro.test))) # Data violates normality assumption
 non_normal <- normality_shapiro_test[normality_shapiro_test$p.value <= .05,]; print(non_normal) # Non-normal data
-homogeneity_test<- t(sapply(balance_df[,3:13], function(x) leveneTest(x~Glasses_FVE,balance_df))) # Equal variances assumed
+homogeneity_test<- t(sapply(balance_df[,c(3:13,17)], function(x) bartlett.test(x~Glasses_FVE,balance_df))) # Equal variances assumed
 
 
 # Visualizing difference in visual measurements in each group
@@ -266,3 +270,119 @@ boxplots <- function(data, cols) {
   boxplot_panel <- do.call(grid.arrange, boxplot_plots)
   return(boxplot_panel)
 }
+print(boxplots(balance_df,cols))
+
+#----------------------------------------#
+# Using QR to assess effect of treatment #
+# on all patients                        #
+#----------------------------------------#
+
+stacked <- stack(data.frame(balance_df$Pre_Cumul,balance_df$After_Cumul))
+qr_test <- summary(rq(values~ind, tau = .5, data = stacked), se = "boot", R = 9999)
+print(qr_test)
+
+emmeans_mod <- emmeans(rq(values~ind, tau = .5, data = stacked), ~ind)
+print(emmeans_mod)
+
+pairs(emmeans_mod)
+
+#----------------------------------------#
+# Using QR to assess effect of treatment #
+# on patients with and w/o glasses       #
+#----------------------------------------#
+
+taus <- c(.05,.15,.25,.50,.75,.95) 
+qr_test2 <- summary(rq(Change_Cumul ~ Glasses_FVE+weeks_glasses+Age, 
+                       taus, data = balance_df), se = "boot", R = 9999)
+  print(qr_test2)
+emmeans_model <-  emmeans(rq(Change_Cumul ~ Glasses_FVE, data = balance_df), ~Glasses_FVE)
+  print(emmeans_model)
+pairs(emmeans_model)
+
+#----------------------------------------------#
+# Wilcoxon signed-rank test for pseudo-medians #
+# (data not iid nor symmetric)                 #
+#----------------------------------------------#
+
+# Difference in medians
+median(balance_df$Pre_Cumul)- median(balance_df$After_Cumul)
+# [1] -34
+
+
+# (Pseudo)median:
+median(outer(balance_df$Pre_Cumul,balance_df$After_Cumul,"-"))
+# [1] -29
+
+# Visualizing  median difference
+layout(matrix(c(1, 2), nrow = 2))
+par(mar = c(5, 4, 2, 1))  # Adjust the margins for the first plot
+hist(balance_df$Pre_Cumul, xlim = c(-20, 100), col = "steelblue", lwd = 2,
+     main = "Histogram of Pre-Cumulative Balance measures")
+abline(v = median(balance_df$Pre_Cumul), col = "gold", lwd = 2) # gold line showing median
+main = "Histogram of Pre-Cumulative Balance measures"
+par(mar = c(5, 4, 2, 1))  # Adjust the margins for the second plot
+hist(balance_df$After_Cumul, xlim = c(-20, 100), col = "steelblue", lwd = 2,
+     main = "Histogram of Post-Cumulative Balance measures")
+abline(v = median(balance_df$After_Cumul), col = "gold", lwd = 2) # gold line showing median
+
+wilcox.test(balance_df$Pre_Cumul, balance_df$After_Cumul,alternative = "two.sided", paired = TRUE, conf.int = T, conf.level = .90)
+# Wilcoxon signed rank test with continuity correction for diff. in pre/after measures
+
+# data:  balance_df$Pre_Cumul and balance_df$After_Cumul
+# V = 0, p-value = 1.669e-12
+# alternative hypothesis: true location shift is not equal to 0
+# 90 percent confidence interval:
+#  -31.00004 -25.00000
+# sample estimates:
+# (pseudo)median 
+# -27.99998 
+
+wilcox.test(Change_Cumul ~ Glasses_FVE, balance_df, paired = TRUE, conf.int = TRUE, conf.level = .90)
+# Wilcoxon signed rank test with continuity correction by Glasses_FVE groups
+
+# data:  Change_Cumul by Glasses_FVE
+# V = 317.5, p-value = 0.514
+# alternative hypothesis: true location shift is not equal to 0
+# 90 percent confidence interval:
+#   -3.999989  7.999987
+# sample estimates:
+#  (pseudo)median 
+# 1.999963 
+
+# Density plot showing distribution of Cumulative changes for patients w. and w/o glasses
+change_density <- ggplot(balance_df, aes(zChange_Cumul)) +
+  geom_density(aes(zChange_Cumul, y = after_stat(density)), fill = "#69b3a2") +
+  geom_label(aes(3.5, .25, label = "Change_Cumul"), color = "#69b3a2") +
+  facet_wrap(~Glasses_FVE, ncol =1 , strip.position = "right", scales = "free_y") +
+  theme_ipsum() +
+  xlab("Change in Cumulative Balance Measurement") +
+  theme_light() +
+  ggtitle("Density plot comparing Change in Cumulative measurements by groups") +
+  theme(plot.title = element_text(family = "", face = "italic", color = "black", size = 12))
+print(change_density)
+
+# Histogram showing distribution of Cumulative changes for patients w. and w/o glasses
+
+no_glasses <- balance_df$Change_Cumul[balance_df$Glasses_FVE == 0] # storing Glasses_FVE Change Cumul in new vars
+glasses <- balance_df$Change_Cumul[balance_df$Glasses_FVE == 1]
+
+layout(matrix(c(1, 2), nrow = 2))
+par(mar = c(5, 4, 2, 1))  # Adjust the margins for the first plot
+hist(no_glasses, xlim = c(-20, 100), col = "steelblue", lwd = 2, 
+     xlab = "Change_Cumul",
+     main = "Histogram of Change in Cumulative measures for patients w. no glasses")
+abline(v = median(no_glasses), col = "gold", lwd = 2) # gold line showing median
+main = "Histogram of Change in Cumulative Balance measures"
+par(mar = c(5, 4, 2, 1))  # Adjust the margins for the second plot
+hist(glasses, xlim = c(-20, 100), col = "steelblue", lwd = 2,
+     xlab = "Change_Cumul",
+     main = "Histogram of Change in Cumulative measures for patients w. glasses")
+abline(v = median(glasses), col = "gold", lwd = 2) # gold line showing median
+
+# Difference in medians
+median(no_glasses) - median(glasses)
+# [1] 3
+
+# (Pseudo)median:
+  median(outer(no_glasses,glasses,"-"))
+# [1] 1

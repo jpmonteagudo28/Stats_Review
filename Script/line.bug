@@ -1,0 +1,11 @@
+model{ # in BUGS language
+  for(i in 1:N){ # Likelihood
+    Y[i] ~ dnorm(mu[i], tau)
+    mu[i] <- alpha + beta * (x[i]-x.bar)
+  }
+  x.bar <- mean(x)
+  alpha ~ dnorm(.0, 1e-4) # Priors
+  beta ~ dnorm(.0, 1e-4)
+  sigma <- 1.0/sqrt(tau)
+  tau ~ dgamma(1e-3,1e-3)
+}

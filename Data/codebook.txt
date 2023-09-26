@@ -4,14 +4,23 @@ https://okanaganvisiontherapy.ca/faq/
 
 Gender: male/female
 Age
+
 Glasses_FVE:  patient wore classes at time of Functional Visual Evaluation (Y/N)
+
 Months since concussion
-Pre-measures of proprioception (percentile) - kinesthesia (awareness of limb movements) and joint position sense
+
+Pre-measures of proprioception (percentile) - kinesthesia - Romberg test (measured in seconds able to stand w. eyes closed) (awareness of limb movements) and joint position sense (https://www.physio-pedia.com/Romberg_Test)
+
 Pre-measures of visual (percentile) - allows us to sense the environment and move through space
-Pre-measures of vestibular (percentile) - senses motion,equilibrium and spatial awareness.
-Number of weeks with glasses
+
+Pre-measures of vestibular (percentile) - senses motion,equilibrium and spatial awareness. (https://www.physio-pedia.com/Objective_Vestibular_Assessment?utm_source=physiopedia&utm_medium=related_articles&utm_campaign=ongoing_internal)
+
+Number of weeks with therapeutic glasses
+
 Post-measures of proprioception (percentile)
+
 Post-measures of visual (percentile)
+
 Post-measures of vestibular (percentile)
 
 I'll need range of improvement, average improvement and statistical significance calculations. I'll also need a comparison of how those who wore glasses prior to injury improved when compared to those who did not wear glasses prior to injury.

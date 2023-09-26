@@ -1,0 +1,29 @@
+---
+title: "Probability Distribution"
+author: "JP Monteagudo"
+date: "2023-09-14"
+output: pdf_document
+---
+
+
+
+| Distribution Name        | LaTeX Formula                                   | Real-Life Example                               |
+|--------------------------|-------------------------------------------------|-------------------------------------------------|
+| **Continuous Distributions**       |                                                 |                                                 |
+| Normal (Gaussian)        | \(f(x) = \frac{1}{{\sigma \sqrt{2\pi}}} e^{-(x-\mu)^2 / (2\sigma^2)}\) | Heights of individuals in a population         |
+| Uniform                  | \(f(x) = \frac{1}{b-a}\)                        | Random numbers between a and b                  |
+| Exponential              | \(f(x) = \lambda e^{-\lambda x}\)              | Time between arrivals in a Poisson process     |
+| Chi-Squared              | \(f(x) = \frac{1}{{2^{\frac{k}{2}}\Gamma\left(\frac{k}{2}\right)}} x^{\frac{k}{2}-1}e^{-\frac{x}{2}}\) | Testing goodness of fit, error analysis        |
+| Cauchy                   | \(f(x) = \frac{1}{\pi(1 + x^2)}\)              | Electrical conductivity in physics experiments |
+| Log-Normal               | \(f(x) = \frac{1}{x\sigma\sqrt{2\pi}}e^{-\frac{(\ln(x) - \mu)^2}{2\sigma^2}}\) | Stock prices, income distribution               |
+| Gamma                    | \(f(x) = \frac{1}{\Gamma(k)\theta^k} x^{k-1} e^{-x/\theta}\) | Waiting times, reliability analysis            |
+| Weibull                  | \(f(x) = \frac{k}{\lambda}\left(\frac{x}{\lambda}\right)^{k-1} e^{-(x/\lambda)^k}\) | Failure times of mechanical components         |
+| Beta                     | \(f(x) = \frac{1}{B(\alpha, \beta)} x^{\alpha-1}(1-x)^{\beta-1}\) | Probability of success in binomial distribution |
+| Triangular               | \(f(x) = \begin{cases} \frac{2(x-a)}{(b-a)(c-a)} & \text{if } a \leq x \leq c \\ \frac{2(b-x)}{(b-a)(b-c)} & \text{if } c \leq x \leq b \\ 0 & \text{otherwise} \end{cases}\) | Estimating uncertainty in project durations     |
+| **Discrete Distributions**        |                                                 |                                                 |
+| Binomial                 | \(P(X=k) = \binom{n}{k} p^k (1-p)^{n-k}\)      | Number of successes in a fixed number of trials |
+| Poisson                  | \(P(X=k) = \frac{e^{-\lambda}\lambda^k}{k!}\)  | Number of events in a fixed interval of time   |
+| Geometric                | \(P(X=k) = (1-p)^{k-1} p\)                     | Number of trials needed for the first success   |
+| Bernoulli                | \(P(X=x) = \begin{cases} p & \text{if } x=1 \\ 1-p & \text{if } x=0 \end{cases}\) | Success/failure in a single trial             |
+| Hypergeometric           | \(P(X=k) = \frac{\binom{K}{k} \binom{N-K}{n-k}}{\binom{N}{n}}\) | Defective items in a sample without replacement |
+
